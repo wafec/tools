@@ -91,29 +91,38 @@ function groupInterestByMonth(history: Interest[]): InterestByMonthAndYear {
   return g;
 }
 
-function calculateInterestDiff(g: InterestByMonthAndYear, intervalMonths: number, intervalYears: number): number {
+function calculateValuation(g: InterestByMonthAndYear, intervalMonths: number, intervalYears: number): number {
   const currentMonth = new Date().getMonth()
   const currentYear = new Date().getFullYear()
   let lookupMonths = [...Array(1 + currentMonth - (Math.max(0, currentMonth - intervalMonths))).keys()].map(v => v + Math.max(0, currentMonth - intervalMonths))
   if (lookupMonths.length < intervalMonths + 1) {
     lookupMonths = [...lookupMonths, ...Array(intervalMonths - lookupMonths.length + 1).keys().map(v => v + 12 - (intervalMonths - lookupMonths.length + 1))]
   }
-  const lookupYears = [...Array(intervalYears + 2).keys().map(v => v + currentYear - intervalYears - 1)]
-  console.log(lookupMonths, lookupYears)
-  let sumTotal = 0
+  const lookupYears = [...Array(intervalYears + 3).keys().map(v => v + currentYear - intervalYears - 2)]
+  const rateMonth = []
   for (const month of lookupMonths) {
-    let sumMonth = 0
-    let yearCount = 0
-    for (let i = lookupYears.length - 1; i > 0 && yearCount < intervalYears + 1; i--) {
+    const yearValues: number[] = []
+    let ignoreFirst = true
+    for (let i = lookupYears.length - 1; i >= 0 && yearValues.length < intervalYears + 2; i--) {
       if (!g[month][lookupYears[i]]) {
-        continue
+        if (ignoreFirst) {
+          ignoreFirst = false
+          continue
+        }
+        yearValues.push(0)
+      } else {
+        yearValues.push(parseFloat(g[month][lookupYears[i]].value))
       }
-      sumMonth += (parseFloat(g[month][lookupYears[i]].value) - parseFloat(g[month][lookupYears[i - 1]].value))
-      yearCount++
     }
-    sumTotal += sumMonth
+    const startAmount = yearValues.reverse().filter(v => v !== 0)[0]
+    const lastAmount = yearValues.reduce((accumulator, currentValue) => accumulator + currentValue, 0)
+    rateMonth.push(getRate(lastAmount, startAmount, intervalYears + 1))
   }
-  return sumTotal
+  return rateMonth.reduce((accumulator, currentValue) => accumulator + currentValue, 0) / rateMonth.length
+}
+
+function getRate(lastAmount: number, startAmount: number, t: number): number {
+  return Math.pow(lastAmount / startAmount, 1/t) - 1
 }
 
 // Learn more at https://docs.deno.com/runtime/manual/examples/module_metadata#concepts
@@ -121,5 +130,6 @@ if (import.meta.main) {
   const dom = getDom()
   getIndicators(dom).forEach(indicator => console.log(indicator.name, '=', indicator.value))
   console.log('Interest History')
-  console.log(calculateInterestDiff(groupInterestByMonth(getInterestHistory(dom)), 11, 0))
+  console.log(calculateValuation(groupInterestByMonth(getInterestHistory(dom)), 11, 0))
+  console.log(getRate(1152, 800, 2))
 }
