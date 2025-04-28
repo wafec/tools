@@ -91,45 +91,26 @@ function groupInterestByMonth(history: Interest[]): InterestByMonthAndYear {
   return g;
 }
 
-function calculateValuation(g: InterestByMonthAndYear, intervalMonths: number, intervalYears: number): number {
-  const currentMonth = new Date().getMonth()
-  const currentYear = new Date().getFullYear()
-  let lookupMonths = [...Array(1 + currentMonth - (Math.max(0, currentMonth - intervalMonths))).keys()].map(v => v + Math.max(0, currentMonth - intervalMonths))
-  if (lookupMonths.length < intervalMonths + 1) {
-    lookupMonths = [...lookupMonths, ...Array(intervalMonths - lookupMonths.length + 1).keys().map(v => v + 12 - (intervalMonths - lookupMonths.length + 1))]
-  }
-  const lookupYears = [...Array(intervalYears + 3).keys().map(v => v + currentYear - intervalYears - 2)]
-  const rateMonth = []
-  for (const month of lookupMonths) {
-    const yearValues: number[] = []
-    let ignoreFirst = true
-    for (let i = lookupYears.length - 1; i >= 0 && yearValues.length < intervalYears + 2; i--) {
-      if (!g[month][lookupYears[i]]) {
-        if (ignoreFirst) {
-          ignoreFirst = false
-          continue
-        }
-        yearValues.push(0)
-      } else {
-        yearValues.push(parseFloat(g[month][lookupYears[i]].value))
-      }
-    }
-    const startAmount = yearValues.reverse().filter(v => v !== 0)[0]
-    const lastAmount = yearValues.reduce((accumulator, currentValue) => accumulator + currentValue, 0)
-    rateMonth.push(getRate(lastAmount, startAmount, intervalYears + 1))
-  }
-  return rateMonth.reduce((accumulator, currentValue) => accumulator + currentValue, 0) / rateMonth.length
-}
-
 function getRate(lastAmount: number, startAmount: number, t: number): number {
   return Math.pow(lastAmount / startAmount, 1/t) - 1
+}
+
+type Price = {
+  price: number
+  date: Date
+}
+
+type PriceHistoryProps = {
+  prices: {price: number, date: string}[]
+}
+
+function getPrices(): Price[] {
+  const data: PriceHistoryProps[] = JSON.parse(fs.readFileSync("tickerprice.json").toString())
+  return data[0].prices.map(p => ({ price: p.price, date: moment(p.date, "DD/MM/YYYY HH:mm").toDate()}))
 }
 
 // Learn more at https://docs.deno.com/runtime/manual/examples/module_metadata#concepts
 if (import.meta.main) {
   const dom = getDom()
   getIndicators(dom).forEach(indicator => console.log(indicator.name, '=', indicator.value))
-  console.log('Interest History')
-  console.log(calculateValuation(groupInterestByMonth(getInterestHistory(dom)), 11, 0))
-  console.log(getRate(1152, 800, 2))
 }
