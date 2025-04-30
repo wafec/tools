@@ -58,7 +58,7 @@ export type ReitRankMapped = {
   p_vp: number;
   liquidez: number;
   dy_cagr: number;
-  lastdividend_price: number;
+  cota_cagr: number;
 };
 
 export type ReitRankComputed = {

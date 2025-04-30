@@ -8,7 +8,7 @@ export function reitResultToRankMapper(o: ReitResultItemProps): ReitRankMapped {
     liquidez: o.liquidezmediadiaria,
     p_vp: o.p_vp,
     dy_cagr: o.dividend_cagr,
-    lastdividend_price: o.lastdividend / o.price,
+    cota_cagr: o.cota_cagr,
   };
 }
 
