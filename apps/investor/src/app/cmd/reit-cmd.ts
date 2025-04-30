@@ -1,6 +1,14 @@
 import { Command } from "commander";
-import fs from "node:fs";
-import { ReitItem1Item2, ReitQueryProps } from "./reit-cmd.types.ts";
+import {
+  ReitItem1Item2,
+  ReitQueryProps,
+  ReitResultProps,
+} from "./reit-cmd.types.ts";
+import {
+  reitRankNormalize,
+  reitResultToRankMapper,
+} from "./reit-cmd.transformers.ts";
+import { reitRankReducer } from "./reit-cmd.reducers.ts";
 
 const reitItem1Item2InitialValue: ReitItem1Item2 = {
   Item1: null,
@@ -24,6 +32,19 @@ const reitQueryInitialValue: ReitQueryProps = {
   lastdividend: reitItem1Item2InitialValue,
 };
 
+export function makeReitCommand() {
+  const reitCmd = new Command("reit");
+
+  reitCmd.command("download").argument("dest").action(handleDownload);
+  reitCmd
+    .command("rank")
+    .argument("source")
+    .argument("dest")
+    .action(handleRank);
+
+  return reitCmd;
+}
+
 async function handleDownload(dest: string) {
   const search = encodeURI(JSON.stringify(reitQueryInitialValue));
   const take = 580;
@@ -31,13 +52,19 @@ async function handleDownload(dest: string) {
     `https://statusinvest.com.br/category/advancedsearchresultpaginated?search=${search}&orderColumn=&isAsc=&page=0&take=${take}&CategoryType=2`,
   );
   const data = await response.json();
-  await fs.writeFile(dest, JSON.stringify(data, null, 2), "utf-8", () => {});
+  await Deno.writeTextFile(dest, JSON.stringify(data, null, 2));
 }
 
-export function makeReitCommand() {
-  const reitCmd = new Command("reit");
-
-  reitCmd.command("download").argument("dest").action(handleDownload);
-
-  return reitCmd;
+async function handleRank(source: string, dest: string) {
+  const text = await Deno.readTextFile(source);
+  const data: ReitResultProps = JSON.parse(text);
+  const rank = reitRankNormalize(data.list.map(reitResultToRankMapper)).map(
+    reitRankReducer,
+  );
+  rank.sort((a, b) => b.score - a.score);
+  let result = "";
+  for (const r of rank) {
+    result += `${r.ticker},${r.score}\n`;
+  }
+  await Deno.writeTextFile(dest, result);
 }

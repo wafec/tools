@@ -5,8 +5,6 @@ import {
   StockResultProps,
 } from "./stock-cmd.types.ts";
 
-import fs from "node:fs";
-
 const item1Item2InitialValue: StockItem1Item2 = {
   Item1: null,
   Item2: null,
@@ -62,7 +60,7 @@ async function handleDownload(dest: string) {
   );
   const data: StockResultProps = await response.json();
 
-  await fs.writeFile(dest, JSON.stringify(data, null, 2), "utf-8", () => {});
+  await Deno.writeTextFile(dest, JSON.stringify(data, null, 2));
 }
 
 export function makeStockCommand() {
