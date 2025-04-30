@@ -5,6 +5,7 @@ import {
   ReitResultProps,
 } from "./reit-cmd.types.ts";
 import {
+  reitFilter,
   reitRankNormalize,
   reitResultToRankMapper,
 } from "./reit-cmd.transformers.ts";
@@ -58,9 +59,9 @@ async function handleDownload(dest: string) {
 async function handleRank(source: string, dest: string) {
   const text = await Deno.readTextFile(source);
   const data: ReitResultProps = JSON.parse(text);
-  const rank = reitRankNormalize(data.list.map(reitResultToRankMapper)).map(
-    reitRankReducer,
-  );
+  const rank = reitRankNormalize(
+    data.list.filter(reitFilter).map(reitResultToRankMapper),
+  ).map(reitRankReducer);
   rank.sort((a, b) => b.score - a.score);
   let result = "";
   for (const r of rank) {

@@ -15,3 +15,7 @@ export function reitResultToRankMapper(o: ReitResultItemProps): ReitRankMapped {
 export function reitRankNormalize(l: ReitRankMapped[]): ReitRankMapped[] {
   return objListNormalize(l);
 }
+
+export function reitFilter(o: ReitResultItemProps): boolean {
+  return o.gestao_f === "Ativa" || o.gestao_f === "Passiva";
+}
