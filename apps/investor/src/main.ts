@@ -1,6 +1,6 @@
 import { Command } from "commander";
-import { makeStockCommand } from "./app/cmd/stock-cmd.ts";
-import { makeReitCommand } from "./app/cmd/reit-cmd.ts";
+import { makeStockCommand } from "./cmd/stock-cmd.ts";
+import { makeReitCommand } from "./cmd/reit/commands.ts";
 
 if (import.meta.main) {
   const program = new Command();
