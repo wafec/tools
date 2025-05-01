@@ -75,7 +75,7 @@ async function handleRankHtmlDownload(
   const csv = await Deno.readTextFile(source);
   let count = 0;
   for (const csvItem of csv.split("\n")) {
-    if (count >= max) {
+    if (count >= max || csvItem.trim() === "") {
       break;
     }
     const ticker = csvItem.split(",")[0].trim();
