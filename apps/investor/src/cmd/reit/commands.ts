@@ -1,22 +1,21 @@
 import { Command } from "commander";
 import {
-  ReitRankWithVarianceComputed,
-  ReitRankWithVarianceMetric,
+  ReitRankWithVariance,
+  ReitRankWithVarianceScore,
   ReitResultProps,
 } from "./types.ts";
 import {
-  reitDividendResultsToMetrics,
   reitFilter,
   reitRankNormalize,
   reitResultToRankMapper,
 } from "./transformers.ts";
 import { reitRankReducer } from "./reducers.ts";
 import { reitQueryInitialValue } from "./constants.ts";
-import { JSDOM } from "jsdom";
-import { randomSleep, sleep } from "../../utils/lang.ts";
+import { randomSleep } from "../../utils/lang.ts";
 import moment from "moment";
 import { variance } from "../../utils/calc.ts";
 import { objListNormalize } from "../../utils/objects.ts";
+import { readReitRankCsv, readReitsJson, ReitHtml } from "./helpers.ts";
 
 export function makeReitCommand() {
   const reitCmd = new Command("reit");
@@ -37,6 +36,7 @@ export function makeReitCommand() {
     .command("rank-with-dividend-variance")
     .argument("source")
     .argument("htmlPath")
+    .argument("reitsPath")
     .argument("dest")
     .action(handleRankWithDividendVariance);
 
@@ -94,62 +94,48 @@ async function handleRankHtmlDownload(
 async function handleRankWithDividendVariance(
   source: string,
   htmlPath: string,
+  reitsPath: string,
   dest: string,
 ) {
   const currentDate = new Date();
   const lastYearDate = moment(currentDate).add(-12, "month").toDate();
-  const rankCsv = await readRankCsv(source);
-  const result: ReitRankWithVarianceComputed[] = [];
+  const rankCsv = await readReitRankCsv(source);
+  const reitsJson = await readReitsJson(reitsPath);
+  const withVariance: ReitRankWithVariance[] = [];
   for await (const dirEntry of Deno.readDir(htmlPath)) {
     if (dirEntry.isFile) {
       const ticker = dirEntry.name.replace(".html", "");
-      const dom = new JSDOM(
-        await Deno.readTextFile(`${htmlPath}/${ticker}.html`),
+      const reitHtml = await ReitHtml.load(`${htmlPath}/${ticker}.html`);
+      const metrics = reitHtml.getMetrics();
+      const lastYearMetrics = metrics.filter(
+        (m) =>
+          m.date.getTime() >= lastYearDate.getTime() &&
+          m.date.getTime() <= currentDate.getTime(),
       );
-      const value = dom.window.document
-        .querySelector("#results")
-        ?.getAttribute("value");
-      if (value) {
-        const data = JSON.parse(value);
-        const metrics: ReitRankWithVarianceMetric[] = data.map(
-          reitDividendResultsToMetrics,
-        );
-        const lastYearMetrics = metrics.filter(
-          (m) =>
-            m.date.getTime() >= lastYearDate.getTime() &&
-            m.date.getTime() <= currentDate.getTime(),
-        );
-        const varianceValue = variance(lastYearMetrics.map((m) => m.value));
-        result.push({
-          ticker: ticker,
-          score: rankCsv.filter((r) => r.ticker == ticker)[0].score,
-          variance: varianceValue,
-        });
-      }
+      const varianceValue = variance(lastYearMetrics.map((m) => m.value));
+      withVariance.push({
+        ticker: ticker,
+        score: rankCsv[ticker].score,
+        variance: varianceValue,
+      });
     }
   }
-  const normalized = objListNormalize<ReitRankWithVarianceComputed>(result);
-  const score = normalized.map((v) => ({
-    ...v,
-    varianceScore: (v.score + (1 - v.variance)) / 2,
-  }));
+  const score = calculateReitRankWithVarianceScore(withVariance);
   score.sort((a, b) => b.varianceScore - a.varianceScore);
   const text = score.reduce(
-    (acc, v) => `${acc}${v.ticker},${v.score},${v.varianceScore}\n`,
+    (acc, v) =>
+      `${acc}${v.ticker},${reitsJson[v.ticker].segment},${v.score},${v.varianceScore}\n`,
     "",
   );
   await Deno.writeTextFile(dest, text);
 }
 
-async function readRankCsv(
-  path: string,
-): Promise<{ ticker: string; score: number }[]> {
-  const data = await Deno.readTextFile(path);
-  return data
-    .split("\n")
-    .map((l) => l.split(","))
-    .reduce<{ ticker: string; score: number }[]>(
-      (acc, v) => [...acc, { ticker: v[0], score: parseFloat(v[1]) }],
-      [],
-    );
+function calculateReitRankWithVarianceScore(
+  l: ReitRankWithVariance[],
+): ReitRankWithVarianceScore[] {
+  const normalized = objListNormalize<ReitRankWithVariance>(l);
+  return normalized.map((v) => ({
+    ...v,
+    varianceScore: (v.score + (1 - v.variance)) / 2,
+  }));
 }

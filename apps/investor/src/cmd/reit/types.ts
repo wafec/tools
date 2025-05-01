@@ -67,14 +67,22 @@ export type ReitRankComputed = {
   target: ReitRankMapped;
 };
 
-export type ReitRankWithVarianceMetric = {
+export type ReitHtmlMetric = {
   date: Date;
   value: number;
 };
 
-export type ReitRankWithVarianceComputed = {
+export type ReitRankWithVariance = {
   ticker: string;
   score: number;
   variance: number;
-  varianceScore?: number;
+};
+
+export type ReitRankWithVarianceScore = ReitRankWithVariance & {
+  varianceScore: number;
+};
+
+export type ReitRankCsvLine = {
+  ticker: string;
+  score: number;
 };

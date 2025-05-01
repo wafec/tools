@@ -2,7 +2,7 @@ import moment from "moment";
 import { objListNormalize } from "../../utils/objects.ts";
 import {
   ReitRankMapped,
-  ReitRankWithVarianceMetric,
+  ReitHtmlMetric,
   ReitResultItemProps,
 } from "./types.ts";
 
@@ -27,7 +27,7 @@ export function reitFilter(o: ReitResultItemProps): boolean {
 
 export function reitDividendResultsToMetrics(d: {
   [key: string]: string | number;
-}): ReitRankWithVarianceMetric {
+}): ReitHtmlMetric {
   return {
     date: moment(d["pd"], "DD/MM/YYYY").toDate(),
     value: d["v"] as number,
