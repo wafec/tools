@@ -4,6 +4,7 @@ import {
   ReitRankMapped,
   ReitHtmlMetric,
   ReitResultItemProps,
+  ReitInfo,
 } from "./types.ts";
 
 export function reitResultToRankMapper(o: ReitResultItemProps): ReitRankMapped {
@@ -32,4 +33,17 @@ export function reitDividendResultsToMetrics(d: {
     date: moment(d["pd"], "DD/MM/YYYY").toDate(),
     value: d["v"] as number,
   };
+}
+
+export function reitResultToInfo(result: ReitResultItemProps): ReitInfo {
+  return {
+    ticker: result.ticker,
+    dy: result.dy,
+  };
+}
+
+export function reitResultByTicker(result: ReitResultItemProps[]): {
+  [ticker: string]: ReitResultItemProps;
+} {
+  return result.reduce((acc, v) => ({ ...acc, [v.ticker]: v }), {});
 }

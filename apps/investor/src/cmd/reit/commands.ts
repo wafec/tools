@@ -7,13 +7,14 @@ import {
 import {
   reitFilter,
   reitRankNormalize,
+  reitResultByTicker,
   reitResultToRankMapper,
 } from "./transformers.ts";
 import { reitRankReducer } from "./reducers.ts";
 import { reitQueryInitialValue } from "./constants.ts";
 import { randomSleep } from "../../utils/lang.ts";
 import moment from "moment";
-import { variance } from "../../utils/calc.ts";
+import { variance } from "~/utils/calc.ts";
 import { objListNormalize } from "../../utils/objects.ts";
 import { readReitRankCsv, readReitsJson, ReitHtml } from "./helpers.ts";
 
@@ -39,6 +40,12 @@ export function makeReitCommand() {
     .argument("reitsPath")
     .argument("dest")
     .action(handleRankWithDividendVariance);
+  reitCmd
+    .command("info")
+    .argument("source")
+    .argument("orderSource")
+    .argument("dest")
+    .action(handleReitInfo);
 
   return reitCmd;
 }
@@ -138,4 +145,21 @@ function calculateReitRankWithVarianceScore(
     ...v,
     varianceScore: (v.score + (1 - v.variance)) / 2,
   }));
+}
+
+async function handleReitInfo(
+  source: string,
+  orderSource: string,
+  dest: string,
+) {
+  const text = await Deno.readTextFile(source);
+  const data: ReitResultProps = JSON.parse(text);
+  const resultByTicker = reitResultByTicker(data.list);
+  const order = await Deno.readTextFile(orderSource);
+  const info = order
+    .split("\n")
+    .filter((l) => l !== "")
+    .map((l) => resultByTicker[l])
+    .reduce((acc, v) => acc + `${v.ticker},${v.dy},${v.cota_cagr || ""}\n`, "");
+  await Deno.writeTextFile(dest, info);
 }

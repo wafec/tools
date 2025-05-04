@@ -86,3 +86,8 @@ export type ReitRankCsvLine = {
   ticker: string;
   score: number;
 };
+
+export type ReitInfo = {
+  ticker: string;
+  dy: number;
+};
